@@ -1,0 +1,23 @@
+version: "3.7"
+
+services:
+  redis_backend:
+    container_name: redis_backend
+    image: redis:alpine
+    networks:
+      - redis_atom_net
+    ports:
+      - 6379:6379
+  redis_cmdr:
+    container_name: redis_cmdr
+    environment:
+      REDIS_HOST: redis_backend
+    image: rediscommander/redis-commander:latest
+    networks:
+      - redis_atom_net
+    ports:
+      - 8081:8081
+
+networks:
+  redis_atom_net:
+    name: redis_atom_net
