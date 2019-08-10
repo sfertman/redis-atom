@@ -6,8 +6,6 @@ services:
     image: redis:alpine
     networks:
       - redis_atom_net
-    ports:
-      - 6379:6379
   redis_cmdr:
     container_name: redis_cmdr
     environment:
