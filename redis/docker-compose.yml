@@ -4,6 +4,8 @@ services:
   redis_backend:
     container_name: redis_backend
     image: redis:alpine
+    ports:
+      - 6379:6379
     networks:
       - redis_atom_net
   redis_cmdr:
