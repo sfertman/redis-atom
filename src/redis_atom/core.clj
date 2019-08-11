@@ -21,8 +21,8 @@
   "Atomically sets the value of atom to newval if and only if the
   current value of the atom is identical to oldval. Returns true if
   set happened, else false"
-  [{:keys conn k} oldval newval]
-  (r/wcar conn (compare-and-set-key! k oldval newva)))
+  [{:keys [conn k]} oldval newval]
+  (r/wcar conn (compare-and-set-key! k oldval newval)))
 
 (defn atom
   [conn k val]
@@ -32,12 +32,12 @@
 (defn reset!
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
-  [{:keys conn k} newval]
+  [{:keys [conn k]} newval]
   (r/wcar conn (r/set k newval)) ;; need to check for sucess;
   newval)
 
 (defn deref
-  [{:keys conn k}]
+  [{:keys [conn k]}]
   (r/wcar conn (r/get k)))
 
 (defn swap!
@@ -45,7 +45,7 @@
   (apply f current-value-of-atom args). Note that f may be called
   multiple times, and thus should be free of side effects.  Returns
   the value that was swapped in."
-  [{:keys conn k} f & args]
+  [{:keys [conn k]} f & args]
   (r/wcar
     conn
     (loop [oldval (r/get k)]
