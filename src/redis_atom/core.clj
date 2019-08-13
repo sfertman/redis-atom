@@ -9,16 +9,16 @@
   (r/wcar conn (r/set k {:data val}))
   {:conn conn :key k})
 
+(defn deref
+  [{:keys [conn key]}]
+  (:data (r/wcar conn (r/get key))))
+
 (defn reset!
   "Sets the value of atom to newval without regard for the
   current value. Returns newval."
   [{:keys [conn key]} newval]
   (r/wcar conn (r/set key {:data newval}))
   newval)
-
-(defn deref
-  [{:keys [conn key]}]
-  (:data (r/wcar conn (r/get key))))
 
 (defn compare-and-set!
   "Atomically sets the value of atom to newval if and only if the
