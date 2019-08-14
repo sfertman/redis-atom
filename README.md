@@ -1,5 +1,5 @@
 # redis-atom
-Like Clojure's atom but on Redis backend.
+Share atoms between services. 
 
 ## Supported for now
 - atom
