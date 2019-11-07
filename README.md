@@ -1,5 +1,5 @@
 # redis-atom
-Share atoms between services. 
+Share atoms between services.
 
 ## Supported for now
 - atom
@@ -9,25 +9,25 @@ Share atoms between services.
 - compare-and-set!
 
 ## Using
-Define redis connection spec like with [`taoensso.carmine`](https://github.com/ptaoussanis/carmine). Define an atom by passing in the connetion spec, a key that will point to the atom value on Redis and the atom value. Everything else is the same as with Clojure atoms (almost).
+Define redis connection spec like with [`taoensso.carmine`](https://github.com/ptaoussanis/carmine). Define an atom by passing in the connetion spec, a key that will point to the atom value on Redis and the atom value. Everything else is exactly the same as with Clojure atoms.
 
 ```clojure
-(require '[redis-atom.core :as r])
+(require '[redis-atom.core :refer [redis-atom]])
 
-(def conn {:pool {} :spec {:uri "redis://localhost:6389"}})
+(def conn {:pool {} :spec {:uri "redis://localhost:6379"}})
 
-(def a (r/atom conn :redis-key {:my-data "42" :more-data 43}))
-; => {:conn {...} :key :redis-key}
+(def a (redis-atom conn :redis-key {:my-data "42" :more-data 43}))
 
-(r/deref a) ; => {:my-data "42" :more-data 43}
+a ; => #object[redis_atom.core.RedisAtom 0x471a378 {:status :ready, :val {:my-data "42", :more-data 43}}]
+(deref a) ; => {:my-data "42" :more-data 43}
 
-(r/reset! a 42) ; => 42
+(reset! a 42) ; => 42
 
-(r/deref a) ; => 42
+@a ; => 42
 
-(r/swap! a inc) ; => 43
+(swap! a inc) ; => 43
 
-(r/deref a) ; => 43
+@a ; => 43
 ```
 
 ## Testing
