@@ -1,6 +1,7 @@
 # redis-atom
 Share atoms between services.
 
+[![Clojars Project](https://img.shields.io/clojars/v/redis-atom.svg)](https://clojars.org/redis-atom)
 ## Supported for now
 - atom
 - deref
