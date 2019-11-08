@@ -13,6 +13,11 @@
   (reset [_ newval]
     (r/wcar conn (r/set k {:data newval}))
     newval)
+  (resetVals [this newval]
+    (loop [oldval @this]
+      (if (compare-and-set! this oldval newval)
+        [oldval newval]
+        (recur @this))))
   (compareAndSet [this oldval newval]
     (r/wcar conn (r/watch k))
     (if (not= oldval @this)
