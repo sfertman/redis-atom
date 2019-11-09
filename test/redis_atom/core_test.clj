@@ -29,7 +29,7 @@
     (is (= 44 @a))))
 
 (deftest test-reset-vals
-  (let [a (redis-atom conn :test-reset 42)]
+  (let [a (redis-atom conn :test-reset-val 42)]
     (is (= 42 @a))
     (is (= [42 43] (reset-vals! a 43)))
     (is (= 43 @a))
@@ -64,7 +64,7 @@
     (is (= 53 (swap! a + 1 1 1 1)))))
 
 (deftest test-swap-vals-arity
-  (let [a (redis-atom conn :test-swap-arity 42)]
+  (let [a (redis-atom conn :test-swap-vals-arity 42)]
     (is (= [42 43] (swap-vals! a inc)))
     (is (= [43 44] (swap-vals! a + 1)))
     (is (= [44 46] (swap-vals! a + 1 1)))
@@ -72,7 +72,7 @@
     (is (= [49 53] (swap-vals! a + 1 1 1 1)))))
 
 (deftest test-swap-locking
-  (let [a (redis-atom conn :test-swap 42)]
+  (let [a (redis-atom conn :test-swap-lock 42)]
     (future
       (is (= 44 (swap! a (partial wait-and-inc 100)))))
     (future
@@ -80,7 +80,7 @@
     (<!! (timeout 250))))
 
 (deftest test-swap-vals-locking
-  (let [a (redis-atom conn :test-swap 42)]
+  (let [a (redis-atom conn :test-swap-vals-lock 42)]
     (future
       (is (= [43 44] (swap-vals! a (partial wait-and-inc 100)))))
     (future
