@@ -5,9 +5,7 @@
     [redis-atom.core :refer [redis-atom]]
     [taoensso.carmine :as redis]))
 
-(def conn {
-  :pool {}
-  :spec {:uri "redis://localhost:6379"}})
+(def conn {:pool {} :spec {:uri "redis://localhost:6379"}})
 
 (defmacro wcar* [& body] `(redis/wcar conn ~@body))
 
