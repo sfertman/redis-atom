@@ -14,13 +14,13 @@
     (r/wcar conn (r/set k {:data newval}))
     newval)
   (resetVals [this newval]
-    (loop [oldval @this]
-      (if (compare-and-set! this oldval newval)
+    (loop [oldval (.deref this)]
+      (if (.compareAndSet this oldval newval)
         [oldval newval]
-        (recur @this))))
+        (recur (.deref this)))))
   (compareAndSet [this oldval newval]
     (r/wcar conn (r/watch k))
-    (if (not= oldval @this)
+    (if (not= oldval (.deref this))
       (do (r/wcar conn (r/unwatch))
           false)
       (some? (r/wcar conn
@@ -28,56 +28,56 @@
                      (r/set k {:data newval})
                      (r/exec)))))
   (swap [this f]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (f oldval)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           newval
-          (recur @this)))))
+          (recur (.deref this))))))
   (swap [this f x]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (f oldval x)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           newval
-          (recur @this)))))
+          (recur (.deref this))))))
   (swap [this f x y]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (f oldval x y)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           newval
-          (recur @this)))))
+          (recur (.deref this))))))
   (swap [this f x y args]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (apply f oldval x y args)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           newval
-          (recur @this)))))
+          (recur (.deref this))))))
   (swapVals [this f]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (f oldval)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           [oldval newval]
-          (recur @this)))))
+          (recur (.deref this))))))
   (swapVals [this f x]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (f oldval x)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           [oldval newval]
-          (recur @this)))))
+          (recur (.deref this))))))
   (swapVals [this f x y]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (f oldval x y)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           [oldval newval]
-          (recur @this)))))
+          (recur (.deref this))))))
   (swapVals [this f x y args]
-    (loop [oldval @this]
+    (loop [oldval (.deref this)]
       (let [newval (apply f oldval x y args)]
-        (if (compare-and-set! this oldval newval)
+        (if (.compareAndSet this oldval newval)
           [oldval newval]
-          (recur @this))))))
+          (recur (.deref this)))))))
 
 (defn redis-atom
   [conn k val]
   (let [r-atom (RedisAtom. conn k)]
-    (reset! r-atom val)
+    (.reset r-atom val)
     r-atom))
