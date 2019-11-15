@@ -11,10 +11,11 @@
 
 (wcar* (redis/flushall))
 
-(deftest test-atom
-  (let [a (redis-atom conn :test-atom 42)]
-    (is (= (.conn a) conn))
-    (is (= (.k a) :test-atom))))
+; (deftest test-atom
+;   ;; TODO: fix it; this test should not be able to access these properties. Figure out some other way of testing creation of atom
+;   (let [a (redis-atom conn :test-atom 42)]
+;     (is (= (.conn a) conn))
+;     (is (= (.k a) :test-atom))))
 
 (deftest test-deref
   (let [a (redis-atom conn :test-deref 42)]
@@ -84,3 +85,11 @@
     (future
       (is (= [42 43] (swap-vals! a (partial wait-and-inc  50)))))
     (<!! (timeout 250))))
+
+(deftest test-watches
+  ;; TODO
+  )
+
+(deftest test-validator
+  ;; TODO
+  )

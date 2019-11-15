@@ -1,83 +1,128 @@
 (ns redis-atom.core
   (:require
-    [taoensso.carmine :as r])
-  (:import
-    clojure.lang.IAtom2
-    clojure.lang.IDeref))
+    [taoensso.carmine :as r]))
 
-(deftype RedisAtom [conn k]
-  IDeref
-  (deref [_] (:data (r/wcar conn (r/get k))))
+(gen-class
+  :name "RedisAtom"
+  :extends clojure.lang.ARef
+  :implements [clojure.lang.IDeref clojure.lang.IAtom2]
+  :state "state"
+  :init "init"
+  :constructors {
+    [clojure.lang.PersistentArrayMap clojure.lang.Keyword] []}
+    ;; TODO add constructor with meta to super. See: clojure.lang.Atom
+  )
 
-  IAtom2
-  (reset [_ newval]
-    (r/wcar conn (r/set k {:data newval}))
-    newval)
-  (resetVals [this newval]
-    (loop [oldval (.deref this)]
+(defn -init
+  [conn k]
+  [[] {:conn conn :k k}])
+
+(defn- conn
+  [^RedisAtom this]
+  (:conn (.state this)))
+
+(defn- k
+  [^RedisAtom this]
+  (:k (.state this)))
+
+(defn- validate
+  "This is a clojure re-implementation of clojure.lang.ARef/validate; this method has no access modifier and so not available to subclasses. It is needed to invoke when reseting or swapping values. clojure.lang.Atom is able to access this method in Java code because they are in the same package but RedisAtom is not."
+  ([^RedisAtom this val]
+    (validate this (.getValidator this) val))
+  ([^RedisAtom this ^clojure.lang.IFn vf val]
+    (try
+      (if (and (some? vf)
+               (not (vf val)))
+        (throw (IllegalStateException. "Invalid reference state")))
+      (catch RuntimeException re
+        (throw re))
+      (catch Exception e
+        (throw (IllegalStateException. "Invalid reference state" e))))))
+
+(defn -deref [this]
+  (:data (r/wcar (conn this) (r/get (k this)))))
+
+(defn -reset [this newval]
+  (let [oldval @this]
+    (validate this newval)
+    (r/wcar (conn this) (r/set (k this) {:data newval}))
+    (.notifyWatches this oldval newval)
+    newval))
+
+(defn -resetVals [this newval]
+  (loop [oldval (.deref this)]
+    (if (.compareAndSet this oldval newval)
+      [oldval newval]
+      (recur (.deref this)))))
+
+(defn -compareAndSet [this oldval newval]
+  (r/wcar conn (r/watch (k this)))
+  (if (not= oldval (.deref this))
+    (do (r/wcar conn (r/unwatch))
+        false)
+    (some? (r/wcar conn
+                   (r/multi)
+                   (r/set (k this) {:data newval})
+                   (r/exec)))))
+
+(defn -swap-IFn [this f]
+  (loop [oldval (.deref this)]
+    (let [newval (f oldval)]
+      (if (.compareAndSet this oldval newval)
+        newval
+        (recur (.deref this))))))
+(defn -swap-IFn-Object [this f x]
+  (loop [oldval (.deref this)]
+    (let [newval (f oldval x)]
+      (if (.compareAndSet this oldval newval)
+        newval
+        (recur (.deref this))))))
+(defn -swap-IFn-Object-Object [this f x y]
+  (loop [oldval (.deref this)]
+    (let [newval (f oldval x y)]
+      (if (.compareAndSet this oldval newval)
+        newval
+        (recur (.deref this))))))
+(defn -swap-IFn-Object-Object-ISeq [this f x y args]
+  (loop [oldval (.deref this)]
+    (let [newval (apply f oldval x y args)]
+      (if (.compareAndSet this oldval newval)
+        newval
+        (recur (.deref this))))))
+
+(defn -swapVals-IFn [this f]
+  (loop [oldval (.deref this)]
+    (let [newval (f oldval)]
       (if (.compareAndSet this oldval newval)
         [oldval newval]
-        (recur (.deref this)))))
-  (compareAndSet [this oldval newval]
-    (r/wcar conn (r/watch k))
-    (if (not= oldval (.deref this))
-      (do (r/wcar conn (r/unwatch))
-          false)
-      (some? (r/wcar conn
-                     (r/multi)
-                     (r/set k {:data newval})
-                     (r/exec)))))
-  (swap [this f]
-    (loop [oldval (.deref this)]
-      (let [newval (f oldval)]
-        (if (.compareAndSet this oldval newval)
-          newval
-          (recur (.deref this))))))
-  (swap [this f x]
-    (loop [oldval (.deref this)]
-      (let [newval (f oldval x)]
-        (if (.compareAndSet this oldval newval)
-          newval
-          (recur (.deref this))))))
-  (swap [this f x y]
-    (loop [oldval (.deref this)]
-      (let [newval (f oldval x y)]
-        (if (.compareAndSet this oldval newval)
-          newval
-          (recur (.deref this))))))
-  (swap [this f x y args]
-    (loop [oldval (.deref this)]
-      (let [newval (apply f oldval x y args)]
-        (if (.compareAndSet this oldval newval)
-          newval
-          (recur (.deref this))))))
-  (swapVals [this f]
-    (loop [oldval (.deref this)]
-      (let [newval (f oldval)]
-        (if (.compareAndSet this oldval newval)
-          [oldval newval]
-          (recur (.deref this))))))
-  (swapVals [this f x]
-    (loop [oldval (.deref this)]
-      (let [newval (f oldval x)]
-        (if (.compareAndSet this oldval newval)
-          [oldval newval]
-          (recur (.deref this))))))
-  (swapVals [this f x y]
-    (loop [oldval (.deref this)]
-      (let [newval (f oldval x y)]
-        (if (.compareAndSet this oldval newval)
-          [oldval newval]
-          (recur (.deref this))))))
-  (swapVals [this f x y args]
-    (loop [oldval (.deref this)]
-      (let [newval (apply f oldval x y args)]
-        (if (.compareAndSet this oldval newval)
-          [oldval newval]
-          (recur (.deref this)))))))
+        (recur (.deref this))))))
+(defn -swapVals-IFn-Object [this f x]
+  (loop [oldval (.deref this)]
+    (let [newval (f oldval x)]
+      (if (.compareAndSet this oldval newval)
+        [oldval newval]
+        (recur (.deref this))))))
+(defn -swapVals-IFn-Object-Object [this f x y]
+  (loop [oldval (.deref this)]
+    (let [newval (f oldval x y)]
+      (if (.compareAndSet this oldval newval)
+        [oldval newval]
+        (recur (.deref this))))))
+(defn -swapVals-IFn-Object-Object-ISeq [this f x y args]
+  (loop [oldval (.deref this)]
+    (let [newval (apply f oldval x y args)]
+      (if (.compareAndSet this oldval newval)
+        [oldval newval]
+        (recur (.deref this))))))
 
 (defn redis-atom
-  [conn k val]
+  [conn k val & {:keys [meta validator]
+                 :or {meta nil
+                      validator nil} }]
   (let [r-atom (RedisAtom. conn k)]
+    (when validator
+      (.setValidator r-atom validator))
+    (when meta
+      (.resetMeta r-atom meta))
     (.reset r-atom val)
     r-atom))
