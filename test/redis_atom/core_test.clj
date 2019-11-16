@@ -87,8 +87,16 @@
     (<!! (timeout 250))))
 
 (deftest test-watches
-  ;; TODO
-  )
+  (let [a (redis-atom conn :test-watches 42)
+        watcher-atom (atom nil)]
+    (add-watch a :watcher (fn [& args] (reset! watcher-atom args)))
+    (reset! a 43)
+    (is (= 43 @a))
+    (is (= @watcher-atom [:watcher a 42 43]))
+    (remove-watch a :watcher)
+    (reset! a 44)
+    (is (= 44 @a))
+    (is (= @watcher-atom [:watcher a 42 43]))))
 
 (deftest test-validator
   ;; TODO
