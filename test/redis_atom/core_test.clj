@@ -3,7 +3,9 @@
     [clojure.core.async :refer [<!! timeout]]
     [clojure.test :refer :all]
     [redis-atom.core :refer [redis-atom]]
-    [taoensso.carmine :as redis]))
+    [taoensso.carmine :as redis])
+  (:import
+    java.lang.IllegalStateException))
 
 (def conn {:pool {} :spec {:uri "redis://localhost:6379"}})
 
@@ -98,6 +100,26 @@
     (is (= 44 @a))
     (is (= @watcher-atom [:watcher a 42 43]))))
 
+(defmacro try-catch-invalid-state [form]
+  `(try ~form
+        (is (= 0 1))
+    (catch IllegalStateException e#
+      (is (= "Invalid reference state") (.getMessage e#)))))
+
 (deftest test-validator
-  ;; TODO
-  )
+  (let [a (redis-atom conn :test-valdator 42 :validator (fn [newval] (< newval 43)))]
+    (is (= 42 @a))
+    (try-catch-invalid-state (reset! a 43))
+    (try-catch-invalid-state (reset-vals! a 43))
+    (try-catch-invalid-state (swap! a inc))
+    (try-catch-invalid-state (swap! a + 1))
+    (try-catch-invalid-state (swap! a + 1 1))
+    (try-catch-invalid-state (swap! a + 1 1 1))
+    (try-catch-invalid-state (swap! a + 1 1 1 1))
+    (try-catch-invalid-state (swap-vals! a inc))
+    (try-catch-invalid-state (swap-vals! a + 1))
+    (try-catch-invalid-state (swap-vals! a + 1 1))
+    (try-catch-invalid-state (swap-vals! a + 1 1 1))
+    (try-catch-invalid-state (swap-vals! a + 1 1 1 1))
+    (try-catch-invalid-state (compare-and-set! a 42 43))
+    (try-catch-invalid-state (compare-and-set! a 43 44))))
