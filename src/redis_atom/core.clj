@@ -9,24 +9,20 @@
   :state "state"
   :init "init"
   :constructors {
-    [clojure.lang.PersistentArrayMap clojure.lang.Keyword] []}
-    ;; TODO add constructor with meta to super. See: clojure.lang.Atom
-  )
+    [clojure.lang.PersistentArrayMap clojure.lang.Keyword] []
+    [clojure.lang.PersistentArrayMap clojure.lang.Keyword clojure.lang.IPersistentMap] [clojure.lang.IPersistentMap]})
 
 (defn -init
-  [conn k]
-  [[] {:conn conn :k k}])
+  ([conn k] [[] {:conn conn :k k}])
+  ([conn k mta] [[mta] {:conn conn :k k}]))
 
-(defn- conn
-  [^RedisAtom this]
-  (:conn (.state this)))
+(defn- conn [^RedisAtom this] (:conn (.state this)))
 
-(defn- k
-  [^RedisAtom this]
-  (:k (.state this)))
+(defn- k [^RedisAtom this] (:k (.state this)))
 
 (defn- validate*
-  "This is a clojure re-implementation of clojure.lang.ARef/validate because cannot be accessed by subclasses Needed to invoke when changing atom state"
+  "This is a clojure re-implementation of clojure.lang.ARef/validate because
+  cannot be accessed by subclasses Needed to invoke when changing atom state"
   [^clojure.lang.IFn vf val]
   (try
     (if (and (some? vf) (not (vf val)))
@@ -36,8 +32,7 @@
     (catch Exception e
       (throw (IllegalStateException. "Invalid reference state" e)))))
 
-(defn -deref [this]
-  (:data (r/wcar (conn this) (r/get (k this)))))
+(defn -deref [this] (:data (r/wcar (conn this) (r/get (k this)))))
 
 (defn -reset [this newval]
   (validate* (.getValidator this) newval)
