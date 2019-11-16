@@ -25,26 +25,24 @@
   [^RedisAtom this]
   (:k (.state this)))
 
-(defn- validate
+(defn- validate*
   "This is a clojure re-implementation of clojure.lang.ARef/validate; this method has no access modifier and so not available to subclasses. It is needed to invoke when reseting or swapping values. clojure.lang.Atom is able to access this method in Java code because they are in the same package but RedisAtom is not."
-  ([^RedisAtom this val]
-    (validate this (.getValidator this) val))
-  ([^RedisAtom this ^clojure.lang.IFn vf val]
-    (try
-      (if (and (some? vf)
-               (not (vf val)))
-        (throw (IllegalStateException. "Invalid reference state")))
-      (catch RuntimeException re
-        (throw re))
-      (catch Exception e
-        (throw (IllegalStateException. "Invalid reference state" e))))))
+  [^clojure.lang.IFn vf val]
+  (try
+    (if (and (some? vf)
+              (not (vf val)))
+      (throw (IllegalStateException. "Invalid reference state")))
+    (catch RuntimeException re
+      (throw re))
+    (catch Exception e
+      (throw (IllegalStateException. "Invalid reference state" e)))))
 
 (defn -deref [this]
   (:data (r/wcar (conn this) (r/get (k this)))))
 
 (defn -reset [this newval]
+  (validate* (.getValidator this) newval)
   (let [oldval @this]
-    (validate this newval)
     (r/wcar (conn this) (r/set (k this) {:data newval}))
     (.notifyWatches this oldval newval)
     newval))
@@ -55,15 +53,24 @@
       [oldval newval]
       (recur (.deref this)))))
 
+(defn- compareAndSet* [this oldval newval]
+  (let [conn* (conn this)
+        k* (k this)]
+    (r/wcar conn* (r/watch k*))
+    (if (not= oldval (.deref this))
+      (do (r/wcar conn* (r/unwatch))
+          false)
+      (some? (r/wcar conn*
+                     (r/multi)
+                     (r/set k* {:data newval})
+                     (r/exec))))))
+
 (defn -compareAndSet [this oldval newval]
-  (r/wcar conn (r/watch (k this)))
-  (if (not= oldval (.deref this))
-    (do (r/wcar conn (r/unwatch))
-        false)
-    (some? (r/wcar conn
-                   (r/multi)
-                   (r/set (k this) {:data newval})
-                   (r/exec)))))
+  (validate* (.getValidator this) newval)
+  (if (compareAndSet* this oldval newval)
+    (do (.notifyWatches this oldval newval)
+        true)
+    false))
 
 (defn -swap-IFn [this f]
   (loop [oldval (.deref this)]
