@@ -42,7 +42,7 @@
 
 (defn -reset [this newval]
   (validate* (.getValidator this) newval)
-  (let [oldval @this]
+  (let [oldval (.deref this)]
     (r/wcar (conn this) (r/set (k this) {:data newval}))
     (.notifyWatches this oldval newval)
     newval))

@@ -11,11 +11,11 @@
 
 (wcar* (redis/flushall))
 
-; (deftest test-atom
-;   ;; TODO: fix it; this test should not be able to access these properties. Figure out some other way of testing creation of atom
-;   (let [a (redis-atom conn :test-atom 42)]
-;     (is (= (.conn a) conn))
-;     (is (= (.k a) :test-atom))))
+(deftest test-create-atom
+  (let [a (redis-atom conn :test-create-atom 42)
+        state-a (.state a)]
+    (is (= (:conn state-a) conn))
+    (is (= (:k state-a) :test-create-atom))))
 
 (deftest test-deref
   (let [a (redis-atom conn :test-deref 42)]
@@ -71,7 +71,7 @@
     (is (= [49 53] (swap-vals! a + 1 1 1 1)))))
 
 (deftest test-swap-locking
-  (let [a (redis-atom conn :test-swap-lock 42)]
+  (let [a (redis-atom conn :test-swap-locking 42)]
     (future
       (is (= 44 (swap! a (partial wait-and-inc 100)))))
     (future
@@ -79,7 +79,7 @@
     (<!! (timeout 250))))
 
 (deftest test-swap-vals-locking
-  (let [a (redis-atom conn :test-swap-vals-lock 42)]
+  (let [a (redis-atom conn :test-swap-vals-locking 42)]
     (future
       (is (= [43 44] (swap-vals! a (partial wait-and-inc 100)))))
     (future
