@@ -26,11 +26,10 @@
   (:k (.state this)))
 
 (defn- validate*
-  "This is a clojure re-implementation of clojure.lang.ARef/validate; this method has no access modifier and so not available to subclasses. It is needed to invoke when reseting or swapping values. clojure.lang.Atom is able to access this method in Java code because they are in the same package but RedisAtom is not."
+  "This is a clojure re-implementation of clojure.lang.ARef/validate because cannot be accessed by subclasses Needed to invoke when changing atom state"
   [^clojure.lang.IFn vf val]
   (try
-    (if (and (some? vf)
-              (not (vf val)))
+    (if (and (some? vf) (not (vf val)))
       (throw (IllegalStateException. "Invalid reference state")))
     (catch RuntimeException re
       (throw re))
