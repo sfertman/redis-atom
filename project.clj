@@ -1,4 +1,4 @@
-(defproject redis-atom "0.1.0-SNAPSHOT"
+(defproject redis-atom "1.0.0"
   :description "Just like clojure's atom but on Redis backend"
   :license {
     :name "MIT"
