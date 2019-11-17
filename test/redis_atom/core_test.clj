@@ -13,11 +13,18 @@
 
 (wcar* (redis/flushall))
 
-(deftest test-create-atom
-  (let [a (redis-atom conn :test-create-atom 42)
+(deftest test-init
+  (let [a (redis-atom.core/RedisAtom. conn :test-init)]
+    (is (= {:conn conn :k :test-init} (.state a))))
+  (let [a (redis-atom.core/RedisAtom. conn :test-init-with-meta {:hello "world"})]
+    (is (= {:conn conn :k :test-init-with-meta} (.state a)))
+    (is (= {:hello "world"} (meta a)))))
+
+(deftest test-create
+  (let [a (redis-atom conn :test-create 42)
         state-a (.state a)]
     (is (= (:conn state-a) conn))
-    (is (= (:k state-a) :test-create-atom))))
+    (is (= (:k state-a) :test-create))))
 
 (deftest test-deref
   (let [a (redis-atom conn :test-deref 42)]
@@ -123,3 +130,8 @@
     (try-catch-invalid-state (swap-vals! a + 1 1 1 1))
     (try-catch-invalid-state (compare-and-set! a 42 43))
     (try-catch-invalid-state (compare-and-set! a 43 44))))
+
+(deftest test-meta
+  (let [a (redis-atom conn :test-meta 42 :meta {:hello "meta"})]
+    (is (= 42 @a))
+    (is (= {:hello "meta"} (meta a)))))
