@@ -8,16 +8,28 @@
   :implements [clojure.lang.IDeref clojure.lang.IAtom2]
   :state "state"
   :init "init"
-  :constructors {
-    [clojure.lang.PersistentArrayMap clojure.lang.Keyword] []
-    [clojure.lang.PersistentArrayMap clojure.lang.Keyword clojure.lang.IPersistentMap] [clojure.lang.IPersistentMap]})
+  :constructors {[
+    clojure.lang.PersistentArrayMap
+    clojure.lang.Keyword
+  ] []
+  [
+    clojure.lang.PersistentArrayMap
+    clojure.lang.Keyword
+    clojure.lang.PersistentArrayMap
+  ] []
+  [
+    clojure.lang.PersistentArrayMap
+    clojure.lang.Keyword
+    clojure.lang.PersistentArrayMap
+    clojure.lang.IPersistentMap
+  ] [clojure.lang.IPersistentMap]})
 
 (defn -init
   ([conn k] [[] {:conn conn :k k}])
-  ([conn k mta] [[mta] {:conn conn :k k}]))
+  ([conn k opts] [[] {:conn conn :k k :options opts}])
+  ([conn k opts mta] [[mta] {:conn conn :k k :options opts}]))
 
 (defn- conn [^RedisAtom this] (:conn (.state this)))
-
 (defn- k [^RedisAtom this] (:k (.state this)))
 
 (defn- validate*
@@ -118,8 +130,8 @@
 
 (defn redis-atom
   ([conn k val] (let [a (RedisAtom. conn k)] (.reset a val) a))
-  ([conn k val & {mta :meta v-tor :validator}]
-    (let [a (redis-atom conn k val)]
-      (when mta (.resetMeta a mta))
-      (when v-tor (.setValidator a v-tor))
+  ([conn k val & {opts :options vtor :validator mta :meta}]
+    (let [a (RedisAtom. conn k opts mta)]
+      (.reset a val)
+      (when vtor (.setValidator a vtor))
       a)))

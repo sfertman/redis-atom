@@ -16,9 +16,11 @@
 (deftest test-init
   (let [a (redis-atom.core/RedisAtom. conn :test-init)]
     (is (= {:conn conn :k :test-init} (.state a))))
-  (let [a (redis-atom.core/RedisAtom. conn :test-init-with-meta {:hello "world"})]
-    (is (= {:conn conn :k :test-init-with-meta} (.state a)))
-    (is (= {:hello "world"} (meta a)))))
+  (let [a (redis-atom.core/RedisAtom. conn :test-init-with-options {:hello "world"})]
+    (is (= {:conn conn :k :test-init-with-options :options {:hello "world"}} (.state a))))
+  (let [a (redis-atom.core/RedisAtom. conn :test-init-with-meta nil {:hello "meta"})]
+    (is (= {:conn conn :k :test-init-with-meta :options nil} (.state a)))
+    (is (= {:hello "meta"} (meta a)))))
 
 (deftest test-create
   (let [a (redis-atom conn :test-create 42)
