@@ -13,13 +13,6 @@
 
 (wcar* (redis/flushall))
 
-(deftest test-init
-  (let [a (redis-atom.core/RedisAtom. conn :test-init)]
-    (is (= {:conn conn :k :test-init} (.state a))))
-  (let [a (redis-atom.core/RedisAtom. conn :test-init-with-meta {:hello "world"})]
-    (is (= {:conn conn :k :test-init-with-meta} (.state a)))
-    (is (= {:hello "world"} (meta a)))))
-
 (deftest test-create
   (let [a (redis-atom conn :test-create 42)
         state-a (.state a)]
