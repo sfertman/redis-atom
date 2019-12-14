@@ -7,12 +7,12 @@
     :state state
     :init init
     :constructors {
-      [clojure.lang.PersistentArrayMap clojure.lang.Keyword] []
-      [clojure.lang.PersistentArrayMap clojure.lang.Keyword clojure.lang.IPersistentMap] [clojure.lang.IPersistentMap]}))
+      [clojure.lang.PersistentArrayMap] []
+      [clojure.lang.PersistentArrayMap clojure.lang.IPersistentMap] [clojure.lang.IPersistentMap]}))
 
 (defn -init
-  ([conn k] [[] {:conn conn :k k}])
-  ([conn k mta] [[mta] {:conn conn :k k}]))
+  ([conn] [[] {:conn conn}])
+  ([conn mta] [[mta] {:conn conn}]))
 
 (defn- validate*
   "This is a clojure re-implementation of clojure.lang.ARef/validate because

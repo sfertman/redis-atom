@@ -6,8 +6,8 @@
 (def conn {:a 1 :b 2 :c {:d 4}})
 
 (deftest test-init
-  (let [a (RedisAtom. conn :test-init)]
-    (is (= {:conn conn :k :test-init} (.state a))))
-  (let [a (RedisAtom. conn :test-init-with-meta {:hello "world"})]
-    (is (= {:conn conn :k :test-init-with-meta} (.state a)))
+  (let [a (RedisAtom. conn)]
+    (is (= {:conn conn} (.state a))))
+  (let [a (RedisAtom. conn {:hello "world"})]
+    (is (= {:conn conn} (.state a)))
     (is (= {:hello "world"} (meta a)))))

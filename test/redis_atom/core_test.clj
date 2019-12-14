@@ -14,23 +14,24 @@
 (wcar* (redis/flushall))
 
 (deftest test-create
-  (let [a (redis-atom conn :test-create 42)
+  (let [a (redis-atom conn 42)
         state-a (.state a)]
-    (is (= (:conn state-a) conn))
-    (is (= (:k state-a) :test-create))))
+    (is (= {:conn conn} (.state a)))))
+    ; (is (= (:conn state-a) conn))
+    ; (is (= (:k state-a) :test-create))))
 
 (deftest test-deref
-  (let [a (redis-atom conn :test-deref 42)]
+  (let [a (redis-atom conn 42)]
     (is (= 42 @a))))
 
 (deftest test-reset
-  (let [a (redis-atom conn :test-reset 42)]
+  (let [a (redis-atom conn 42)]
     (is (= 42 @a))
     (is (= 44 (reset! a 44)))
     (is (= 44 @a))))
 
 (deftest test-reset-vals
-  (let [a (redis-atom conn :test-reset-val 42)]
+  (let [a (redis-atom conn 42)]
     (is (= 42 @a))
     (is (= [42 43] (reset-vals! a 43)))
     (is (= 43 @a))
@@ -42,7 +43,7 @@
     (is (= "abc" @a))))
 
 (deftest test-compare-and-set
-  (let [a (redis-atom conn :test-compare-and-set 42)]
+  (let [a (redis-atom conn 42)]
     (is (= 42 @a))
     (is (false? (compare-and-set! a 57 44)))
     (is (= 42 @a))
@@ -57,7 +58,7 @@
     xpp))
 
 (deftest test-swap-arity
-  (let [a (redis-atom conn :test-swap-arity 42)]
+  (let [a (redis-atom conn 42)]
     (is (= 43 (swap! a inc)))
     (is (= 44 (swap! a + 1)))
     (is (= 46 (swap! a + 1 1)))
@@ -65,7 +66,7 @@
     (is (= 53 (swap! a + 1 1 1 1)))))
 
 (deftest test-swap-vals-arity
-  (let [a (redis-atom conn :test-swap-vals-arity 42)]
+  (let [a (redis-atom conn 42)]
     (is (= [42 43] (swap-vals! a inc)))
     (is (= [43 44] (swap-vals! a + 1)))
     (is (= [44 46] (swap-vals! a + 1 1)))
@@ -73,7 +74,7 @@
     (is (= [49 53] (swap-vals! a + 1 1 1 1)))))
 
 (deftest test-swap-locking
-  (let [a (redis-atom conn :test-swap-locking 42)]
+  (let [a (redis-atom conn 42)]
     (future
       (is (= 44 (swap! a (partial wait-and-inc 100)))))
     (future
@@ -81,7 +82,7 @@
     (<!! (timeout 250))))
 
 (deftest test-swap-vals-locking
-  (let [a (redis-atom conn :test-swap-vals-locking 42)]
+  (let [a (redis-atom conn 42)]
     (future
       (is (= [43 44] (swap-vals! a (partial wait-and-inc 100)))))
     (future
@@ -89,7 +90,7 @@
     (<!! (timeout 250))))
 
 (deftest test-watches
-  (let [a (redis-atom conn :test-watches 42)
+  (let [a (redis-atom conn 42)
         watcher-atom (atom nil)]
     (add-watch a :watcher (fn [& args] (reset! watcher-atom args)))
     (reset! a 43)
@@ -107,7 +108,7 @@
       (is (= "Invalid reference state") (.getMessage e#)))))
 
 (deftest test-validator
-  (let [a (redis-atom conn :test-valdator 42 :validator (fn [newval] (< newval 43)))]
+  (let [a (redis-atom conn 42 :validator (fn [newval] (< newval 43)))]
     (is (= 42 @a))
     (try-catch-invalid-state (reset! a 43))
     (try-catch-invalid-state (reset-vals! a 43))
@@ -125,6 +126,6 @@
     (try-catch-invalid-state (compare-and-set! a 43 44))))
 
 (deftest test-meta
-  (let [a (redis-atom conn :test-meta 42 :meta {:hello "meta"})]
+  (let [a (redis-atom conn 42 :meta {:hello "meta"})]
     (is (= 42 @a))
     (is (= {:hello "meta"} (meta a)))))

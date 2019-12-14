@@ -4,14 +4,14 @@ Share clojure atoms between services.
 [![Clojars Project](https://img.shields.io/clojars/v/redis-atom.svg)](https://clojars.org/redis-atom)
 
 ## Using
-Define redis connection spec like with [`taoensso.carmine`](https://github.com/ptaoussanis/carmine). Define an atom by passing in the connetion spec, a key that will point to the atom value on Redis and the atom value. Everything else is exactly the same as with Clojure atoms.
+Define redis connection spec like with [`taoensso.carmine`](https://github.com/ptaoussanis/carmine). Define an atom by passing in the connetion spec and the atom value. Everything else is exactly the same as with Clojure atoms.
 
 ```clojure
 (require '[redis-atom.core :refer [redis-atom]])
 
 (def conn {:pool {} :spec {:uri "redis://localhost:6379"}})
 
-(def a (redis-atom conn :redis-key {:my-data "42" :more-data 43}))
+(def a (redis-atom conn {:my-data "42" :more-data 43}))
 
 a ; => #object[redis_atom.core.RedisAtom 0x471a378 {:status :ready, :val {:my-data "42", :more-data 43}}]
 @a ; => {:my-data "42" :more-data 43}
