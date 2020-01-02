@@ -39,11 +39,10 @@
 
 (defn -compareAndSet [this oldval newval]
   (validate* (.getValidator this) newval)
-  (if (r/compare-and-set* (:conn (.state this)) (:k (.state this)) oldval newval)
-    (do
-      (.notifyWatches this oldval newval)
-      true)
-    false))
+  (let [ret (r/compare-and-set* (:conn (.state this)) (:k (.state this)) oldval newval)]
+    (when ret
+      (.notifyWatches this oldval newval))
+    ret))
 
 (defn -resetVals [this newval]
   (loop [oldval (.deref this)]
