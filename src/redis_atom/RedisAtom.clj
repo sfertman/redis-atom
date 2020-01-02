@@ -26,15 +26,23 @@
     (catch Exception e
       (throw (IllegalStateException. "Invalid reference state" e)))))
 
-(defn -deref [this] (r/deref* this))
+(defn -deref [this]
+  (r/deref* (:conn (.state this)) (:k (.state this))))
 
 (defn -reset [this newval]
   (validate* (.getValidator this) newval)
-  (r/reset* this newval))
+  (let [oldval (.deref this)]
+    (r/reset* (:conn (.state this)) (:k (.state this)) newval)
+    (.notifyWatches this oldval newval)
+    newval))
+;; ^^ Note: this looks dubious but this is the way clojure atom works at the moment. Seems like there's no point ensuring atomic tx here since there are explicit tools for that, namely swap!.
 
 (defn -compareAndSet [this oldval newval]
   (validate* (.getValidator this) newval)
-  (r/compare-and-set* this oldval newval))
+  (let [ret (r/compare-and-set* (:conn (.state this)) (:k (.state this)) oldval newval)]
+    (when ret
+      (.notifyWatches this oldval newval))
+    ret))
 
 (defn -resetVals [this newval]
   (loop [oldval (.deref this)]
