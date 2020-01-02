@@ -1,5 +1,5 @@
 (defproject redis-atom "1.0.0"
-  :description "Just like clojure's atom but on Redis backend"
+  :description "Share clojure atoms between services via redis"
   :license {
     :name "MIT"
     :url "https://opensource.org/licenses/mit-license.php"}
