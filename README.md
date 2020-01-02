@@ -1,5 +1,5 @@
 # redis-atom
-Share clojure atoms between services.
+Share clojure atoms between services via redis.
 
 [![Clojars Project](https://img.shields.io/clojars/v/redis-atom.svg)](https://clojars.org/redis-atom)
 
