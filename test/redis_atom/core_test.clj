@@ -14,10 +14,32 @@
 (wcar* (redis/flushall))
 
 (deftest test-create
-  (let [a (redis-atom conn :test-create 42)
-        state-a (.state a)]
-    (is (= (:conn state-a) conn))
-    (is (= (:k state-a) :test-create))))
+  (testing "create with conn & k *without* existing key on backend"
+    (let [a (redis-atom conn :test-create-1)
+          state-a (.state a)]
+      (is (= conn (:conn state-a)))
+      (is (= :test-create-1 (:k state-a)))
+      (is (nil? @a))))
+  (testing "create with conn & k *with* existing key on backend"
+    (let [_ (redis-atom conn :test-create-2 42)
+          a (redis-atom conn :test-create-2)
+          state-a (.state a)]
+    (is (= conn (:conn state-a)))
+    (is (= :test-create-2 (:k state-a)))
+    (is (= 42 @a))))
+  (testing "create with conn, k & val *without* existing key on backend"
+    (let [a (redis-atom conn :test-create-3 42)
+          state-a (.state a)]
+      (is (= conn (:conn state-a)))
+      (is (= :test-create-3 (:k state-a)))
+      (is (= 42 @a))))
+  (testing "create with conn, k & val *with* existing key on backend"
+    (let [_ (redis-atom conn :test-create-4 42)
+          a (redis-atom conn :test-create-4 43)
+          state-a (.state a)]
+      (is (= conn (:conn state-a)))
+      (is (= :test-create-4 (:k state-a)))
+      (is (= 42 @a)))))
 
 (deftest test-deref
   (let [a (redis-atom conn :test-deref 42)]
@@ -73,19 +95,21 @@
     (is (= [49 53] (swap-vals! a + 1 1 1 1)))))
 
 (deftest test-swap-locking
-  (let [a (redis-atom conn :test-swap-locking 42)]
+  (let [a (redis-atom conn :test-swap-locking 42)
+        b (redis-atom conn :test-swap-locking)]
     (future
       (is (= 44 (swap! a (partial wait-and-inc 100)))))
     (future
-      (is (= 43 (swap! a (partial wait-and-inc  50)))))
+      (is (= 43 (swap! b (partial wait-and-inc  50)))))
     (<!! (timeout 250))))
 
 (deftest test-swap-vals-locking
-  (let [a (redis-atom conn :test-swap-vals-locking 42)]
+  (let [a (redis-atom conn :test-swap-vals-locking 42)
+        b (redis-atom conn :test-swap-vals-locking)]
     (future
       (is (= [43 44] (swap-vals! a (partial wait-and-inc 100)))))
     (future
-      (is (= [42 43] (swap-vals! a (partial wait-and-inc  50)))))
+      (is (= [42 43] (swap-vals! b (partial wait-and-inc  50)))))
     (<!! (timeout 250))))
 
 (deftest test-watches
