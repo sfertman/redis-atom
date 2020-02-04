@@ -23,8 +23,8 @@ a ; => #object[redis_atom.core.RedisAtom 0x471a378 {:status :ready, :val {:my-da
 @b ; => 42
 
 (reset-vals! a 43) ; => [42 43]
-(swap! a inc) ; => 43
-(swap-vals! a inc) ; => [43 44]
+(swap! a inc) ; => 44
+(swap-vals! a inc) ; => [44 45]
 ```
 
 ## Testing
