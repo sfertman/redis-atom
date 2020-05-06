@@ -3,7 +3,7 @@
   <groupId>redis-atom</groupId>
   <artifactId>redis-atom</artifactId>
   <packaging>jar</packaging>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
   <name>redis-atom</name>
   <description>Share clojure atoms between services via redis with one line of code</description>
   <licenses>
@@ -16,7 +16,7 @@
     <url>https://github.com/sfertman/redis-atom</url>
     <connection>scm:git:git://github.com/sfertman/redis-atom.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/sfertman/redis-atom.git</developerConnection>
-    <tag>b23141638d64351aeebbbbad5324bf384c04df73</tag>
+    <tag>c901e04ebbad6010d2cb899a6c82a01e9246e3af</tag>
   </scm>
   <build>
     <sourceDirectory>src</sourceDirectory>
