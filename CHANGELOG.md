@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.1
+- Remove clojure.core.async dependency
+- Minor fixes
+
 ## v1.1.0
 - New redis-atom should not overwrite existing key-value pair on backend.
 - Added no-value redis-atom arity.

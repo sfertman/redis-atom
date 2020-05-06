@@ -1,4 +1,4 @@
-(defproject redis-atom "1.1.0"
+(defproject redis-atom "1.1.1"
   :description "Share clojure atoms between services via redis with one line of code"
   :license {
     :name "MIT"
