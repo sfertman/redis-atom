@@ -1,6 +1,5 @@
 (ns redis-atom.core-test
   (:require
-    [clojure.core.async :refer [<!! timeout]]
     [clojure.test :refer :all]
     [redis-atom.core :refer [redis-atom]]
     [taoensso.carmine :as redis])
@@ -73,7 +72,7 @@
 
 (defn wait-and-inc
   [t-ms x]
-  (<!! (timeout t-ms))
+  (Thread/sleep t-ms)
   (let [xpp (inc x)]
     (prn (str "wait-and-inc waited for " t-ms " [ms]: " x " + 1 = " xpp ))
     xpp))
@@ -101,7 +100,7 @@
       (is (= 44 (swap! a (partial wait-and-inc 100)))))
     (future
       (is (= 43 (swap! b (partial wait-and-inc  50)))))
-    (<!! (timeout 250))))
+    (Thread/sleep 250)))
 
 (deftest test-swap-vals-locking
   (let [a (redis-atom conn :test-swap-vals-locking 42)
@@ -110,7 +109,7 @@
       (is (= [43 44] (swap-vals! a (partial wait-and-inc 100)))))
     (future
       (is (= [42 43] (swap-vals! b (partial wait-and-inc  50)))))
-    (<!! (timeout 250))))
+    (Thread/sleep 250)))
 
 (deftest test-watches
   (let [a (redis-atom conn :test-watches 42)
