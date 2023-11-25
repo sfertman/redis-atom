@@ -12,7 +12,13 @@
   (if (not= oldval (deref* conn k))
     (do (r/wcar conn (r/unwatch))
         false)
-    (some? (r/wcar conn
-                   (r/multi)
-                   (r/set k {:data newval})
-                   (r/exec)))))
+    #_else
+    ;; carmine returns a result for each command, so if everything works as
+    ;; expected, it will return
+    ;; ["OK" "QUEUED" ["OK"]]
+    ;; being the last result the outcome of the queued commands.
+    (= ["OK"] (last
+               (r/wcar conn
+                       (r/multi)
+                       (r/set k {:data newval})
+                       (r/exec))))))

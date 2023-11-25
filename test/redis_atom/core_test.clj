@@ -68,7 +68,45 @@
     (is (false? (compare-and-set! a 57 44)))
     (is (= 42 @a))
     (is (true? (compare-and-set! a 42 44)))
-    (is (= 44 @a))))
+    (is (= 44 @a)))
+  (testing "compare and set will properly return false if there is a modification while executing redis transaction"
+    ;; NOTE this code tries to trigger a race condition, but it may be flaky
+    ;; depending on how the threads are started.
+    (let [test-key
+          :test-compare-and-set]
+      (try
+        (let [increment-key
+              (fn increment-key []
+                (loop [i 100000]
+                  (when (pos? i)
+                    (do (redis/wcar conn
+                                    (redis/set test-key i))
+                        (recur (dec i))))))
+
+              watch-and-transact
+              (fn watch-and-transact []
+                (redis/wcar conn
+                            (redis/watch test-key))
+                (let [result
+                      (redis/wcar conn
+                                  (redis/multi)
+                                  (redis/set test-key 0)
+                                  (redis/exec))]
+                  (= ["OK"] (last result))))
+
+              inc-future
+              (future (increment-key))
+
+              watch-future
+              (future (watch-and-transact))
+
+              _inc-res @inc-future
+              watch-res @watch-future]
+
+          (is (= false watch-res)))
+        (finally
+          (redis/wcar conn
+                      (redis/del test-key)))))))
 
 (defn wait-and-inc
   [t-ms x]
