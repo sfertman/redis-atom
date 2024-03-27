@@ -19,7 +19,7 @@
   cannot be accessed by subclasses Needed to invoke when changing atom state"
   [^clojure.lang.IFn vf val]
   (try
-    (if (and (some? vf) (not (vf val)))
+    (when (and (some? vf) (not (vf val)))
       (throw (IllegalStateException. "Invalid reference state")))
     (catch RuntimeException re
       (throw re))
@@ -30,14 +30,19 @@
   (r/deref* (:conn (.state this)) (:k (.state this))))
 
 (defn -reset [this newval]
-  (validate* (.getValidator this) newval)
-  (let [oldval (.deref this)]
-    (r/reset* (:conn (.state this)) (:k (.state this)) newval)
-    (.notifyWatches this oldval newval)
-    newval))
+  ;; (validate* (.getValidator this) newval)
+  (let [[old-value new-value]
+        (r/lock-set (:conn (.state this)) (:k (.state this))
+                    (partial validate* (.getValidator this)) (constantly newval) nil)]
+    (.notifyWatches this old-value new-value)
+    new-value)
+  #_(let [oldval (.deref this)]
+      (r/reset* (:conn (.state this)) (:k (.state this)) newval)
+      (.notifyWatches this oldval newval)
+      newval))
 ;; ^^ Note: this looks dubious but this is the way clojure atom works at the moment. Seems like there's no point ensuring atomic tx here since there are explicit tools for that, namely swap!.
 
-(defn -compareAndSet [this oldval newval]
+#_(defn -compareAndSet [this oldval newval]
   (validate* (.getValidator this) newval)
   (let [ret (r/compare-and-set* (:conn (.state this)) (:k (.state this)) oldval newval)]
     (when ret
@@ -45,18 +50,30 @@
     ret))
 
 (defn -resetVals [this newval]
-  (loop [oldval (.deref this)]
-    (if (.compareAndSet this oldval newval)
-      [oldval newval]
-      (recur (.deref this)))))
+  ;; (validate* (.getValidator this) newval)
+  (let [[old-value new-value]
+        (r/lock-set (:conn (.state this)) (:k (.state this))
+                    (partial validate* (.getValidator this))
+                    (constantly newval) nil)]
+    (.notifyWatches this old-value new-value)
+    [old-value new-value])
+  #_(loop [oldval (.deref this)]
+      (if (.compareAndSet this oldval newval)
+        [oldval newval]
+        (recur (.deref this)))))
 
 (defn- swap*
   [this f & args]
-  (loop [oldval (.deref this)]
-    (let [newval (apply f oldval args)]
-      (if (.compareAndSet this oldval newval)
-        newval
-        (recur (.deref this))))))
+  (let [[_ new-value]
+        (r/lock-set (:conn (.state this)) (:k (.state this))
+                    (partial validate* (.getValidator this))
+                    f args)]
+    new-value)
+  #_(loop [oldval (.deref this)]
+      (let [newval (apply f oldval args)]
+        (if (.compareAndSet this oldval newval)
+          newval
+          (recur (.deref this))))))
 
 (defn -swap-IFn
   [this f] (swap* this f))
@@ -69,11 +86,15 @@
 
 (defn- swap-vals*
   [this f & args]
-  (loop [oldval (.deref this)]
-    (let [newval (apply f oldval args)]
-      (if (.compareAndSet this oldval newval)
-        [oldval newval]
-        (recur (.deref this))))))
+  (let [[old-value new-value]
+        (r/lock-set (:conn (.state this)) (:k (.state this))
+                    (partial validate* (.getValidator this)) f args)]
+    [old-value new-value])
+  #_(loop [oldval (.deref this)]
+      (let [newval (apply f oldval args)]
+        (if (.compareAndSet this oldval newval)
+          [oldval newval]
+          (recur (.deref this))))))
 
 (defn -swapVals-IFn
   [this f] (swap-vals* this f))

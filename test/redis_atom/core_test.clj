@@ -68,7 +68,45 @@
     (is (false? (compare-and-set! a 57 44)))
     (is (= 42 @a))
     (is (true? (compare-and-set! a 42 44)))
-    (is (= 44 @a))))
+    (is (= 44 @a)))
+  (testing "compare and set will properly return false if there is a modification while executing redis transaction"
+    ;; NOTE this code tries to trigger a race condition, but it may be flaky
+    ;; depending on how the threads are started.
+    (let [test-key
+          :test-compare-and-set]
+      (try
+        (let [increment-key
+              (fn increment-key []
+                (loop [i 100000]
+                  (when (pos? i)
+                    (do (redis/wcar conn
+                                    (redis/set test-key i))
+                        (recur (dec i))))))
+
+              watch-and-transact
+              (fn watch-and-transact []
+                (redis/wcar conn
+                            (redis/watch test-key))
+                (let [result
+                      (redis/wcar conn
+                                  (redis/multi)
+                                  (redis/set test-key 0)
+                                  (redis/exec))]
+                  (= ["OK"] (last result))))
+
+              inc-future
+              (future (increment-key))
+
+              watch-future
+              (future (watch-and-transact))
+
+              _inc-res @inc-future
+              watch-res @watch-future]
+
+          (is (= false watch-res)))
+        (finally
+          (redis/wcar conn
+                      (redis/del test-key)))))))
 
 (defn wait-and-inc
   [t-ms x]
@@ -96,20 +134,73 @@
 (deftest test-swap-locking
   (let [a (redis-atom conn :test-swap-locking 42)
         b (redis-atom conn :test-swap-locking)]
+    ;; NOTE here we had to change the result, since now the first thread will
+    ;; complete first, no matter if it takes longer than the second. To achieve
+    ;; the original effect, the thread sleep should be outside of the swap! (see
+    ;; testing below)
     (future
-      (is (= 44 (swap! a (partial wait-and-inc 100)))))
+      (is (= 43 (swap! a (partial wait-and-inc 100)))))
     (future
-      (is (= 43 (swap! b (partial wait-and-inc  50)))))
-    (Thread/sleep 250)))
+      (is (= 44 (swap! b (partial wait-and-inc  50)))))
+    (Thread/sleep 250))
+
+  (testing "Waiting outside of swap"
+    (let [a (redis-atom conn :test-swap-locking-2 42)
+          b (redis-atom conn :test-swap-locking-2)]
+      (future
+        (Thread/sleep 100)
+        (is (= 44 (swap! a inc))))
+      (future
+        (Thread/sleep 50)
+        (is (= 43 (swap! b inc))))
+      (Thread/sleep 250)))
+
+  (testing "Lock is freed even when function crashes"
+    (let [a (redis-atom conn :test-swap-locking-3 42)
+          b (redis-atom conn :test-swap-locking-3)
+          crash-me (fn [_] (/ 1 0))]
+      (future
+        (Thread/sleep 100)
+        (is (= 43 (swap! a inc))))
+      (future
+        (Thread/sleep 50)
+        (is (thrown? java.lang.ArithmeticException (swap! b crash-me))))
+      (Thread/sleep 250))))
 
 (deftest test-swap-vals-locking
   (let [a (redis-atom conn :test-swap-vals-locking 42)
-        b (redis-atom conn :test-swap-vals-locking)]
+        b (redis-atom conn :test-swap-vals-locking)
+        results (volatile! #{})]
+    ;; NOTE here we had to change the result, since now the first thread will
+    ;; complete first, no matter if it takes longer than the second. To achieve
+    ;; the original effect, the thread sleep should be outside of the swap! (see
+    ;; testing below)
     (future
-      (is (= [43 44] (swap-vals! a (partial wait-and-inc 100)))))
+      (let [new-vals
+            (swap-vals! a (partial wait-and-inc 100))]
+        (is (vswap! results conj new-vals))))
+    (Thread/sleep 10)
     (future
-      (is (= [42 43] (swap-vals! b (partial wait-and-inc  50)))))
-    (Thread/sleep 250)))
+      (let [new-vals
+            (swap-vals! b (partial wait-and-inc 50))]
+        (is (vswap! results conj new-vals))))
+    (Thread/sleep 250)
+    (is (= #{[42 43] [43 44]} @results)))
+
+  (testing "Waiting outside of swap"
+    (let [a (redis-atom conn :test-swap-vals-locking-2 42)
+          b (redis-atom conn :test-swap-vals-locking-2)]
+    ;; NOTE here we had to change the result, since now the first thread will
+    ;; complete first, no matter if it takes longer than the second. To achieve
+    ;; the original effect, the thread sleep should be outside of the swap! (see
+    ;; testing below)
+      (future
+        (Thread/sleep 100)
+        (is (= [43 44] (swap-vals! a inc))))
+      (future
+        (Thread/sleep 50)
+        (is (= [42 43] (swap-vals! b inc))))
+      (Thread/sleep 250))))
 
 (deftest test-watches
   (let [a (redis-atom conn :test-watches 42)
@@ -126,8 +217,8 @@
 (defmacro try-catch-invalid-state [form]
   `(try ~form
         (is (= 0 1))
-    (catch IllegalStateException e#
-      (is (= "Invalid reference state") (.getMessage e#)))))
+        (catch IllegalStateException e#
+          (is (= "Invalid reference state" (.getMessage e#))))))
 
 (deftest test-validator
   (let [a (redis-atom conn :test-valdator 42 :validator (fn [newval] (< newval 43)))]
